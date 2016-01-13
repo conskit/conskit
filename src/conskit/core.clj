@@ -89,7 +89,7 @@
          (log/info "Starting Action Registry")
          (-> context
              (assoc :phase :start)
-             (assoc :container @registry-container)))
+             (assoc :container (build-registry @registry-container))))
   (stop [this context]
         (log/info "Stopping Action Registry")
         (-> context

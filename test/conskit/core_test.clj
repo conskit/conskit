@@ -5,26 +5,14 @@
 
 (def test-container (atom {}))
 
-(defn ^:all test-interceptor-request
-  "Test Interceptor"
-  [f config]
-  (fn [request data]
-    (f request (assoc data :intercept-req config))))
-
-(defn test-interceptor-response
-  "Test Interceptor"
-  [f config]
-  (fn [request data]
-    (assoc (f request data) :intercept-resp config)))
-
 (with-state-changes
   [(before :facts (do (reset! test-container {:controllers  []
                                               :bindings     {}
                                               :interceptors {}})
                       (register-controllers!* [test-controller] test-container)
                       (register-bindings!* {:a 1 :b 2} test-container)
-                      (register-interceptors!* {:intercept-request  #'test-interceptor-request
-                                                :intercept-response #'test-interceptor-response} {:intercept-request 0 :intercept-response 2} test-container)))]
+                      ;(register-interceptors!* [] {:intercept-request 0 :intercept-response 2} test-container)
+                      ))]
   (fact (map #(select-keys % [:name :requires]) (:controllers @test-container)) => [{:name "test-controller" :requires [:a :b]}])
   (fact (:bindings @test-container) => {:a 1 :b 2})
   (fact (first (get-in @test-container [:interceptors :annotations])) => :intercept-response)
