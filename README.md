@@ -208,19 +208,19 @@ retrieve any action that was registered in a controller. `get-action` expects to
 action ID and it will return an `ActionInstance` on which `conskit.core/invoke` can be called.
 
 The action IDs are created by concatenating the name provided with the namespace it was declared/defined in. So in our
-very first example of a simple service. Its ID would actually be `:com.foobar/do-all-the-things`:
+very first example of a simple action. Its ID would actually be `:com.foobar/do-all-the-things`:
 
 ```clojure
 (get-action :com.foobar/do-all-the-things)
 ```
 
-So essentially you could build your routing service could leverage `get-action` and dispatch actions based on the ID
+So essentially your routing service could leverage `get-action` and dispatch actions based on the ID
 provided
 
 ## What makes conskit different?
 
 The main selling point of this toolkit is that everything is replaceable including the core service provided. You have
-the option to used third-party services witch may register their own actions, controllers, bindings and interceptors, you can
+the option to used third-party services which may register their own actions, controllers, bindings and interceptors, you can
 be selective and use only a subset of the functionality offered by the third party or you can choose to roll your own.
 Conskit does not attempt to provide you with a "framework" but to provide you with the facility to construct your own
 "framework" (or application) from several reusable and replaceable parts.
