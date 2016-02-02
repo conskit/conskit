@@ -10,4 +10,4 @@
   :profiles {:dev {:source-paths ["dev"]
                    :dependencies [[puppetlabs/trapperkeeper "1.2.0" :classifier "test"]
                                   [midje "1.8.3"]]
-                   :plugins [[lein-midje "3.1.3"]]}})
+                   :plugins [[lein-midje "3.2"]]}})

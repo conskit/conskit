@@ -11,37 +11,68 @@
 
 
 (defmacro action [action-name args & body]
-  (let [defined-in-ns (str *ns*)]
+  (let [action-ns (or (namespace action-name) (str *ns*))
+        temp-name (symbol (name action-name))
+        action-meta (meta action-name)]
     (assert (= (count args) 2) "Function arity for actions must be 2")
-    `(let [action-var# (def ~action-name)
-           metadata# (meta action-var#)
-           _# (ns-unmap *ns* '~action-name)
-           key# (keyword ~defined-in-ns (name '~action-name))]
-       {key# {:metadata (-> metadata# (dissoc :column) (dissoc :ns))
-              :fn      (fn ~args ~@body)}})))
+    `(let [action-var# (def ~temp-name)                     ;; Might not Need this anymore
+           metadata# (merge (meta action-var#) ~action-meta)
+           _# (ns-unmap *ns* '~temp-name)
+           key# (keyword ~action-ns (name '~action-name))]
+       {key# {:metadata (-> metadata#
+                            (dissoc :column)
+                            (dissoc :ns)
+                            (assoc :id key#))
+              :f      (fn ~args ~@body)}})))
 
 (defmacro defcontroller [cname args & actions]
   (let [destructured (destructure [{:keys args}])
-        metadata (meta cname)]
+        metadata (meta cname)
+        defined-in-ns (str *ns*)]
     `(def ~cname "kdjfkjlad"
        {:name     (name '~cname)
         :requires (map keyword '~args)
         :metadata ~metadata
+        :ns       ~defined-in-ns
         :fn       (fn
                     ~destructured
                     (merge ~@actions))})))
 
 (defmacro definterceptor [iname & forms]
   (let [meta (meta iname)
-        all-except? (:all-except meta)
-        annot (if all-except? meta (first (first meta)))
+        _ (assert meta (str "Missing annotation for interceptor: " iname))
+        annot (first (first meta))
+        has-ns? (namespace annot)
         has-doc? (string? (first forms))
         doc-string (if has-doc? (first forms) "")
-        [args & body] (if has-doc? (rest forms) forms)]
+        [args & body] (if has-doc? (rest forms) forms)
+        num-args (count args)
+        annot-alias (if has-ns? (keyword (name annot)) annot)
+        qualified-annot (if has-ns? annot (keyword (str *ns*) (name annot)))
+        result {:alias annot-alias :annotation qualified-annot}]
     (assert (= (count meta) 1) "Only one annotation allowed per interceptor")
-    (condp = (count args)
-      2 `{:annotation ~annot
-          :fn         (defn ~iname ~doc-string ~args ~@body)}
-      4 `{:annotation ~annot
-          :fn         (defn ~iname ~doc-string [~@(take 2 args)]
-                        (fn [~@(take-last 2 args)] ~@body))})))
+    (condp = num-args
+      2 `(def ~iname ~doc-string
+           (assoc ~result
+             :fn (fn [~@args] ~@body)))
+      3 (let [bindings (get args 2)
+              _ (assert (and (set? bindings)
+                             (not-empty bindings)) "Interceptor bindings must be specified as a non-empty set of symbols")
+              b-args (destructure (assoc args 2 {:keys (into [] bindings)}))]
+          `(def ~iname ~doc-string
+             (assoc ~result
+               :fn (fn [~@b-args] ~@body))))
+      4 `(def ~iname ~doc-string
+           (assoc ~result
+             :fn (fn [~@(take 2 args)]
+                   (fn [~@(take-last 2 args)] ~@body))))
+      5 (let [bindings (get args 2)
+              _ (assert (and (set? bindings)
+                             (not-empty bindings)) "Interceptor bindings must be specified as a non-empty set of symbols")
+              first-args (into [] (take 3 args))
+              b-args (destructure (assoc first-args 2 {:keys (into [] bindings)}))
+              rest-args (take-last 2 args)]
+          `(def ~iname ~doc-string
+             (assoc ~result
+               :fn (fn [~@b-args]
+                     (fn [~@rest-args] ~@body))))))))
