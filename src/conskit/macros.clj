@@ -11,7 +11,8 @@
 
 
 (defmacro action [action-name args & body]
-  (let [action-ns (or (namespace action-name) (str *ns*))
+  (let [defined-ns (str *ns*)
+        action-ns (or (namespace action-name) defined-ns)
         temp-name (symbol (name action-name))
         action-meta (meta action-name)]
     (assert (= (count args) 2) "Function arity for actions must be 2")
@@ -22,7 +23,8 @@
        {key# {:metadata (-> metadata#
                             (dissoc :column)
                             (dissoc :ns)
-                            (assoc :id key#))
+                            (assoc :id key#)
+                            (assoc :ns ~defined-ns))
               :f      (fn ~args ~@body)}})))
 
 (defmacro defcontroller [cname args & actions]
@@ -49,7 +51,7 @@
         num-args (count args)
         annot-alias (if has-ns? (keyword (name annot)) annot)
         qualified-annot (if has-ns? annot (keyword (str *ns*) (name annot)))
-        result {:alias annot-alias :annotation qualified-annot}]
+        result {:alias annot-alias :annotation qualified-annot :name (name iname)}]
     (assert (= (count meta) 1) "Only one annotation allowed per interceptor")
     (condp = num-args
       2 `(def ~iname ~doc-string
@@ -60,8 +62,9 @@
                              (not-empty bindings)) "Interceptor bindings must be specified as a non-empty set of symbols")
               b-args (destructure (assoc args 2 {:keys (into [] bindings)}))]
           `(def ~iname ~doc-string
-             (assoc ~result
-               :fn (fn [~@b-args] ~@body))))
+             (-> ~result
+                 (assoc :requires (map keyword '~bindings))
+                 (assoc :fn (fn [~@b-args] ~@body)))))
       4 `(def ~iname ~doc-string
            (assoc ~result
              :fn (fn [~@(take 2 args)]
@@ -73,6 +76,7 @@
               b-args (destructure (assoc first-args 2 {:keys (into [] bindings)}))
               rest-args (take-last 2 args)]
           `(def ~iname ~doc-string
-             (assoc ~result
-               :fn (fn [~@b-args]
-                     (fn [~@rest-args] ~@body))))))))
+             (-> ~result
+                 (assoc :requires (map keyword '~bindings))
+                 (assoc :fn (fn [~@b-args]
+                         (fn [~@rest-args] ~@body)))))))))
