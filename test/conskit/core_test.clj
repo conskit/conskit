@@ -56,7 +56,7 @@
   controller-with-annotation
   []
   (action
-    ^{:modify-response true}
+    ^{::modify-response true}
     action-with-annotation
     [req data]
     {:hello "world" :req req})
@@ -127,11 +127,11 @@
         (get-in @test-container [:interceptors :annotations]) => (just [{::modify-response false} {::modify-req-resp true} {:foo/modify-request false}]))
   (fact "Intercetor function for :foo/modify-request works as expected"
         (let [f (get-in @test-container [:interceptors :handlers :foo/modify-request])
-              intercepted (f (fn [request data] request) true test-bindings)]
+              intercepted (f (fn [request _] request) true test-bindings)]
           (intercepted {} {})) => {:mod :req})
   (fact "Intercetor function for ::modify-response works as expected"
         (let [f (get-in @test-container [:interceptors :handlers ::modify-response])
-              intercepted (f (fn [request data] data) true)]
+              intercepted (f (fn [_ data] data) true)]
           (intercepted {} {})) => {:mod :resp})
   (fact "Intercetor function for ::modify-req-response works as expected"
         (let [f (get-in @test-container [:interceptors :handlers ::modify-req-resp])
@@ -156,4 +156,11 @@
   (fact "Invoking the action ::i-really-want-this-action should NOT intercept the request or response and should work as expected"
         (conskit.protocols/invoke (get-action* @test-registry ::i-really-want-this-action)
                                   {} {}) => {:woo! :i_am_the_best})
-  )
+  (fact "Metadata for all actions can be retrieved with select-meta-keys"
+        (select-meta-keys* @test-registry [:id]) => [{:id :not/normal-action}
+                                                     {:id ::action-with-annotation}
+                                                     {:id ::action-without-annotation}
+                                                     {:id ::i-want-this-action}
+                                                     {:id ::i-really-want-this-action}])
+  (fact "Metadata for a single action can be retrieved with select-meta-keys"
+        (select-meta-keys* @test-registry ::action-with-annotation [::modify-response :modify-reponse]) => {::modify-response true}))

@@ -34,5 +34,5 @@
      returns a new function that accepts a request, data and metadata")
   (get-action [this id]
     "Retrieve an action from the registry")
-  (selectactions [this key-seq]
-    "Is effectively the result of mapping selectkeys on the metadata of all actions"))
+  (select-meta-keys [this key-seq] [this id key-seq]
+    "Is effectively the result of mapping selectkeys on the metadata of a one or all action(s)"))

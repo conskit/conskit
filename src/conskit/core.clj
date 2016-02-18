@@ -10,7 +10,7 @@
 ;; Concrete Implementation of Action Protocol
 (defrecord ActionInstance [metadata f]
   Action
-  (invoke [this request data]
+  (invoke [_ request data]
     (f request data)))
 
 
@@ -74,6 +74,14 @@
   "Retrieves an action"
   [container id]
   (get container id))
+
+(defn select-meta-keys*
+  "Is effectively the result of mapping selectkeys on the metadata of a one or all action(s)"
+  ([container key-seq]
+    (map #(select-keys % key-seq)
+         (map :metadata (vals container))))
+  ([container id key-seq]
+    (select-keys (:metadata (get-action* container id)) key-seq)))
 
 (defn- check-requirements-satisfied!
   "Verifies that bindings exist for all the controller parameters"
@@ -203,6 +211,7 @@
                         :init (service-context this)
                         (register-interceptors!* interceptors (get-in-config [:registry :interceptors :priorties]) registry-container)))
   (get-action [this id] (get-action* (:container (service-context this)) id))
-  (selectactions [this key-seq]
-                 ; TODO: Implement Me
-                 ))
+  (select-meta-keys [this key-seq]
+                    (select-meta-keys* (:container (service-context this)) key-seq))
+  (select-meta-keys [this id key-seq]
+                    (select-meta-keys* (:container (service-context this)) id key-seq)))
