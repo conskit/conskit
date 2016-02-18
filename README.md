@@ -1,5 +1,5 @@
 
-# Conskit [![Build Status](https://travis-ci.org/conskit/conskit.svg)](https://travis-ci.org/conskit/conskit) [![Dependencies Status](https://jarkeeper.com/conskit/conskit/status.svg)](https://jarkeeper.com/conskit/conskit)
+# Conskit [![Build Status](https://travis-ci.org/conskit/conskit.svg)](https://travis-ci.org/conskit/conskit) [![Dependencies Status](https://jarkeeper.com/conskit/conskit/status.svg)](https://jarkeeper.com/conskit/conskit) [![Clojars Project](https://img.shields.io/clojars/v/conskit.svg)](https://clojars.org/conskit)
 
 Conskit (Construction Kit) is a toolkit that makes it easy to construct Clojure web applications in a very modular and consistent manner
 while still providing freedom and flexibility that has become commonplace in the Clojure community.
