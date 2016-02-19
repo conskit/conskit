@@ -25,35 +25,35 @@
   [add binding-a binding-b]
   (action
     not/normal-action
-    [req data]
+    [req]
     {:result (add binding-a binding-b)}))
 
 (definterceptor
   ^:foo/modify-request
    modify-requests
   "Intercepts requests and adds {:mod :req}"
-  [f config #{add} request data]
+  [f config #{add} request]
   (if config
-    (f (assoc request :mod :req) data)
-    (f request data)))
+    (f (assoc request :mod :req))
+    (f request)))
 
 (definterceptor
   ^:modify-response
   modify-responses
   "Intercepts responses and adds {:mod :resp}"
-  [f config request data]
+  [f config request]
   (if config
-    (assoc (f request data) :mod :resp)
-    (f request data)))
+    (assoc (f request) :mod :resp)
+    (f request)))
 
 (definterceptor
   ^:modify-req-resp
   modify-both
   "Modifyies the request and response"
-  [f config #{add} request data]
+  [f config #{add} request]
   (if config
-    (assoc (f (assoc request :req :mod) data) :resp :mod)
-    (f request data)))
+    (assoc (f (assoc request :req :mod)) :resp :mod)
+    (f request)))
 
 (defcontroller
   ^{:modify-request true}
@@ -62,11 +62,11 @@
   (action
     ^{::modify-response true}
     action-with-annotation
-    [req data]
+    [req]
     {:hello "world" :req req})
   (action
     action-without-annotation
-    [req data]
+    [req]
     {:hello "world" :req req}))
 
 (defcontroller
@@ -74,11 +74,11 @@
   []
   (action
     i-want-this-action
-    [req data]
+    [req]
     {:hey :i_got_picked})
   (action
     i-dont-want-this-action
-    [req data]
+    [req]
     {:boo! :i_was_not_chosen}))
 
 (defcontroller
@@ -86,11 +86,11 @@
   []
   (action
     i-really-want-this-action
-    [req data]
+    [req]
     {:woo! :i_am_the_best})
   (action
     i-really-dont-want-this-action
-    [req data]
+    [req]
     {:sad :i_am_depressed}))
 
 (with-state-changes
@@ -131,35 +131,35 @@
         (get-in @test-container [:interceptors :annotations]) => (just [{::modify-response false} {::modify-req-resp true} {:foo/modify-request false}]))
   (fact "Intercetor function for :foo/modify-request works as expected"
         (let [f (get-in @test-container [:interceptors :handlers :foo/modify-request])
-              intercepted (f (fn [request _] request) true test-bindings)]
-          (intercepted {} {})) => {:mod :req})
+              intercepted (f (fn [request] request) true test-bindings)]
+          (intercepted {})) => {:mod :req})
   (fact "Intercetor function for ::modify-response works as expected"
         (let [f (get-in @test-container [:interceptors :handlers ::modify-response])
-              intercepted (f (fn [_ data] data) true)]
-          (intercepted {} {})) => {:mod :resp})
+              intercepted (f (fn [request] request) true)]
+          (intercepted {})) => {:mod :resp})
   (fact "Intercetor function for ::modify-req-response works as expected"
         (let [f (get-in @test-container [:interceptors :handlers ::modify-req-resp])
-              intercepted (f (fn [request data] (merge request data)) true test-bindings)]
-          (intercepted {} {})) => {:resp :mod :req :mod})
+              intercepted (f (fn [request] request) true test-bindings)]
+          (intercepted {})) => {:resp :mod :req :mod})
   (fact "Global intereptors can specify settings when registered"
     (get-in @test-container [:interceptors :settings ::modify-req-resp]) => {:except :dont-modify-me})
   (fact "All actions from all controllers where registered except those that were explicitly filtered out"
     (keys @test-registry) => [:not/normal-action  ::action-with-annotation ::action-without-annotation ::i-want-this-action ::i-really-want-this-action])
   (fact "Invoking the action ::action-with-annotation should intercept the request and response"
         (p/invoke (get-action* @test-registry ::action-with-annotation)
-                                  {} {}) => {:hello "world", :mod :resp, :req {:mod :req}})
+                                  {}) => {:hello "world", :mod :resp, :req {:mod :req}})
   (fact "Invoking the action ::action-without-annotation should ONLY intercept the request"
         (p/invoke (get-action* @test-registry ::action-without-annotation)
-                                  {} {}) => {:hello "world", :req {:mod :req}})
+                                  {}) => {:hello "world", :req {:mod :req}})
   (fact "Invoking the action :not/normal-action should NOT intercept the request or response and should have result adding the 2 services"
         (p/invoke (get-action* @test-registry :not/normal-action)
-                                  {} {}) => {:result 3})
+                                  {}) => {:result 3})
   (fact "Invoking the action ::i-want-this-action should NOT intercept the request or response and should work as expected"
         (p/invoke (get-action* @test-registry ::i-want-this-action)
-                                  {} {}) => {:hey :i_got_picked})
+                                  {}) => {:hey :i_got_picked})
   (fact "Invoking the action ::i-really-want-this-action should NOT intercept the request or response and should work as expected"
         (p/invoke (get-action* @test-registry ::i-really-want-this-action)
-                                  {} {}) => {:woo! :i_am_the_best})
+                                  {}) => {:woo! :i_am_the_best})
   (fact "Metadata for all actions can be retrieved with select-meta-keys"
         (select-meta-keys* @test-registry [:id]) => [{:id :not/normal-action}
                                                      {:id ::action-with-annotation}
@@ -191,19 +191,19 @@
   {:config "./dev-resources/test-config.conf"}
   (let [reg (app/get-service app :ActionRegistry)]
     (fact (p/invoke (p/get-action reg ::action-with-annotation)
-                    {} {}) => {:hello "world", :mod :resp, :req {:mod :req}})
+                    {}) => {:hello "world", :mod :resp, :req {:mod :req}})
     (fact "Invoking the action ::action-with-annotation should intercept the request and response"
           (p/invoke (p/get-action reg ::action-with-annotation)
-                    {} {}) => {:hello "world", :mod :resp, :req {:mod :req}})
+                    {}) => {:hello "world", :mod :resp, :req {:mod :req}})
     (fact "Invoking the action ::action-without-annotation should ONLY intercept the request"
           (p/invoke (p/get-action reg ::action-without-annotation)
-                    {} {}) => {:hello "world", :req {:mod :req}})
+                    {}) => {:hello "world", :req {:mod :req}})
     (fact "Invoking the action :not/normal-action should NOT intercept the request or response and should have result adding the 2 services"
           (p/invoke (p/get-action reg :not/normal-action)
-                    {} {}) => {:result 3})
+                    {}) => {:result 3})
     (fact "Invoking the action ::i-want-this-action should NOT intercept the request or response and should work as expected"
           (p/invoke (p/get-action reg ::i-want-this-action)
-                    {} {}) => {:hey :i_got_picked})
+                    {}) => {:hey :i_got_picked})
     (fact "Invoking the action ::i-really-want-this-action should NOT intercept the request or response and should work as expected"
           (p/invoke (p/get-action reg ::i-really-want-this-action)
-                    {} {}) => {:woo! :i_am_the_best})))
+                    {}) => {:woo! :i_am_the_best})))

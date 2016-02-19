@@ -10,8 +10,8 @@
 ;; Concrete Implementation of Action Protocol
 (defrecord ActionInstance [metadata f]
   Action
-  (invoke [_ request data]
-    (f request data)))
+  (invoke [_ request]
+    (f request)))
 
 (def empty-container {:controllers []
                       :bindings {}

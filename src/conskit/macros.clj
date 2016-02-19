@@ -15,7 +15,7 @@
         action-ns (or (namespace action-name) defined-ns)
         temp-name (symbol (name action-name))
         action-meta (meta action-name)]
-    (assert (= (count args) 2) "Function arity for actions must be 2")
+    (assert (= (count args) 1) "Function arity for actions must be 1")
     `(let [action-var# (def ~temp-name)                     ;; Might not Need this anymore
            metadata# (merge (meta action-var#) ~action-meta)
            _# (ns-unmap *ns* '~temp-name)
@@ -57,24 +57,26 @@
       2 `(def ~iname ~doc-string
            (assoc ~result
              :fn (fn [~@args] ~@body)))
-      3 (let [bindings (get args 2)
-              _ (assert (and (set? bindings)
-                             (not-empty bindings)) "Interceptor bindings must be specified as a non-empty set of symbols")
-              b-args (destructure (assoc args 2 {:keys (into [] bindings)}))]
-          `(def ~iname ~doc-string
-             (-> ~result
-                 (assoc :requires (map keyword '~bindings))
-                 (assoc :fn (fn [~@b-args] ~@body)))))
-      4 `(def ~iname ~doc-string
-           (assoc ~result
-             :fn (fn [~@(take 2 args)]
-                   (fn [~@(take-last 2 args)] ~@body))))
-      5 (let [bindings (get args 2)
+      3 (let [arg (get args 2)
+              isBinding? (and (set? arg)
+                             (not-empty arg))
+              b-args (if isBinding?
+                       (destructure (assoc args 2 {:keys (into [] arg)}))
+                       args)]
+          (if isBinding?
+            `(def ~iname ~doc-string
+               (-> ~result
+                   (assoc :requires (map keyword '~arg))
+                   (assoc :fn (fn [~@b-args] ~@body))))
+            `(def ~iname ~doc-string
+               (assoc ~result :fn (fn [~@(take 2 args)]
+                                    (fn [~@(take-last 1 args)] ~@body))))))
+      4 (let [bindings (get args 2)
               _ (assert (and (set? bindings)
                              (not-empty bindings)) "Interceptor bindings must be specified as a non-empty set of symbols")
               first-args (into [] (take 3 args))
               b-args (destructure (assoc first-args 2 {:keys (into [] bindings)}))
-              rest-args (take-last 2 args)]
+              rest-args (take-last 1 args)]
           `(def ~iname ~doc-string
              (-> ~result
                  (assoc :requires (map keyword '~bindings))

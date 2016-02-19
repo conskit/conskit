@@ -2,7 +2,7 @@
 
 (defprotocol Action
   "Actions can be invoked"
-  (invoke [this request data] "Invoke this action"))
+  (invoke [this request] "Invoke this action"))
 
 (defprotocol ActionRegistry
   "Functions to manage an instance of ActionRegistry"

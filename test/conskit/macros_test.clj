@@ -6,7 +6,7 @@
                    ^{:doc "This cool action"
                      :intercept-request true}
                    do-all-the-things
-                   [a _]
+                   [a]
                    {:foo a}))
 (defcontroller
   ^{:intercept-response true}
@@ -16,29 +16,29 @@
   (action
     ^{:doc "This cool action"}
     do-one-thing
-    [_ _]
+    [_]
     {:foo a}))
 
 (definterceptor
   ^:intercept-request
   test-interceptor-request
   "Intercept Request"
-  [f config request data]
-  (f request (assoc data :intercept-req config)))
+  [f config request]
+  (f (assoc request :intercept-req config)))
 
 (definterceptor
   ^:all
   test-interceptor-all
   "Intercept all actions"
-  [f config request data]
-  (f (assoc request :all-actions :have-this) data))
+  [f config request]
+  (f (assoc request :all-actions :have-this)))
 
 (definterceptor
   ^:does-nothing
   test-interceptor-all-except
   "Intercept all actions"
-  [f config request data]
-  (f (assoc request :all-actions :have-this) data))
+  [f config request]
+  (f (assoc request :all-actions :have-this)))
 
 (definterceptor
   ^:intercept-response
@@ -61,7 +61,7 @@
 (fact
   "Calling the action function should execute the body with the parameters"
   (let [f (get-in test-action [::do-all-the-things :f])]
-    (f "bar" 2)) => {:foo "bar"})
+    (f "bar")) => {:foo "bar"})
 
 (fact
   "defcontroller macro procduces correct name and requirements"
@@ -76,7 +76,7 @@
   "An action defined within defcontroller should have access to the controllers bindings."
   (let [ctrlf (get test-controller :fn)
         f (get-in (ctrlf {:a :baz :b 2}) [::do-one-thing :f])]
-    (f 1 2)) => {:foo :baz})
+    (f 1)) => {:foo :baz})
 
 (fact
   "definterceptor macro produces the correct annotation"
@@ -86,5 +86,5 @@
 (fact
   "Interceptor function returns an intercepted function"
   (let [f (:fn test-interceptor-request)
-        intercepted (f #(merge %1 %2) {:empty :config})]
-    (intercepted {} {})) => {:intercept-req {:empty :config}})
+        intercepted (f #(identity %1) {:empty :config})]
+    (intercepted {})) => {:intercept-req {:empty :config}})
