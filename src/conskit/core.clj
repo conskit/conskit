@@ -13,17 +13,18 @@
   (invoke [_ request data]
     (f request data)))
 
+(def empty-container {:controllers []
+                      :bindings {}
+                      :interceptors {:annotations #{}
+                                     :aliases      {}
+                                     :requirements {}
+                                     :handlers    {}
+                                     :settings    {}}})
 
 ;; Action Registry Service
 (def ^:private registry-container
   "Temporary container"
-  (atom {:controllers []
-         :bindings {}
-         :interceptors {:annotations #{}
-                        :aliases      {}
-                        :requirements {}
-                        :handlers    {}
-                        :settings    {}}}))
+  (atom empty-container))
 
 (defn- compare-priority
   "Compares the priority of two annotations"
@@ -31,7 +32,7 @@
   (fn [m1 m2]
     (let [[k1 _] (first m1)
           [k2 _] (first m2)]
-      (>= (or (config k1) 0) (or (config k2) 0)))))
+      (>= (or (k1 config) 0) (or (k2 config) 0)))))
 
 (defn register-interceptors!*
   "Registers a list of controllers"
@@ -173,8 +174,6 @@
 
 (defservice
   ;; See ActionRegistry Protocol Documentation
-  ;; Change this to store the action group/functions initially along with all domain services in the INIT phase
-  ;; Then in the START Phase is where the action maps will be realized by closing them over all the domain services
   registry ActionRegistry
   [[:ConfigService get-in-config]]
   (init [this context]
@@ -191,6 +190,7 @@
                                                (get-in-config [:registry :allow-overrides])))))
   (stop [this context]
         (log/info "Stopping Action Registry")
+        (reset! registry-container empty-container)
         (-> context
             (assoc :state nil)
             (assoc :container nil)))
@@ -209,7 +209,7 @@
   (register-interceptors! [this interceptors]
                       (within-phase
                         :init (service-context this)
-                        (register-interceptors!* interceptors (get-in-config [:registry :interceptors :priorties]) registry-container)))
+                        (register-interceptors!* interceptors (get-in-config [:registry :interceptors :priorities]) registry-container)))
   (get-action [this id] (get-action* (:container (service-context this)) id))
   (select-meta-keys [this key-seq]
                     (select-meta-keys* (:container (service-context this)) key-seq))

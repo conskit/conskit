@@ -6,8 +6,9 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [slingshot "0.12.2"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [puppetlabs/trapperkeeper "1.2.0"]]
+                 [puppetlabs/trapperkeeper "1.3.0"]]
   :profiles {:dev {:source-paths ["dev"]
-                   :dependencies [[puppetlabs/trapperkeeper "1.2.0" :classifier "test"]
+                   :dependencies [[puppetlabs/trapperkeeper "1.3.0" :classifier "test"]
+                                  [puppetlabs/kitchensink "1.3.0" :classifier "test" :scope "test"]
                                   [midje "1.8.3"]]
                    :plugins [[lein-midje "3.2"]]}})

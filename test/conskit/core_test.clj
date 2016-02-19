@@ -1,5 +1,9 @@
 (ns conskit.core-test
   (:require [conskit.core :refer :all]
+            [puppetlabs.trapperkeeper.app :as app]
+            [puppetlabs.trapperkeeper.core :refer [defservice]]
+            [puppetlabs.trapperkeeper.testutils.bootstrap :refer [with-app-with-cli-data]]
+            [conskit.protocols :as p]
             [conskit.macros :refer :all])
   (:use midje.sweet))
 
@@ -10,7 +14,7 @@
 
 (def priorities-config {:foo/modify-request 0 ::modify-response 2})
 
-(def test-bindings {:add + :service-a 1 :service-b 2})
+(def test-bindings {:add + :binding-a 1 :binding-b 2})
 
 (def global-exclusions [::action-without-annotation])
 
@@ -18,11 +22,11 @@
 
 (defcontroller
   normal-controller
-  [add service-a service-b]
+  [add binding-a binding-b]
   (action
     not/normal-action
     [req data]
-    {:result (add service-a service-b)}))
+    {:result (add binding-a binding-b)}))
 
 (definterceptor
   ^:foo/modify-request
@@ -116,13 +120,13 @@
   ;; Tests
   (fact "All Controllers have been registered with their requirements, metadata and include/exclude option"
         (map #(select-keys % [:name :requires :metadata :exclude :include])
-             (:controllers @test-container)) => [{:name "normal-controller" :requires [:add :service-a :service-b] :metadata nil}
+             (:controllers @test-container)) => [{:name "normal-controller" :requires [:add :binding-a :binding-b] :metadata nil}
                                                  {:name "controller-with-annotation" :requires [] :metadata {:modify-request true}}
                                                  {:name "controller-with-some-unwanted-actions" :requires [] :metadata nil :exclude [::i-dont-want-this-action]}
                                                  {:name "controller-with-some-wanted-actions" :requires [] :metadata nil :include [::i-really-want-this-action]}
                                                  ])
   (fact "All bindings were registered"
-        (keys (:bindings @test-container)) => [:add :service-a :service-b])
+        (keys (:bindings @test-container)) => [:add :binding-a :binding-b])
   (fact "Interceptor Annotations where registered"
         (get-in @test-container [:interceptors :annotations]) => (just [{::modify-response false} {::modify-req-resp true} {:foo/modify-request false}]))
   (fact "Intercetor function for :foo/modify-request works as expected"
@@ -142,19 +146,19 @@
   (fact "All actions from all controllers where registered except those that were explicitly filtered out"
     (keys @test-registry) => [:not/normal-action  ::action-with-annotation ::action-without-annotation ::i-want-this-action ::i-really-want-this-action])
   (fact "Invoking the action ::action-with-annotation should intercept the request and response"
-        (conskit.protocols/invoke (get-action* @test-registry ::action-with-annotation)
+        (p/invoke (get-action* @test-registry ::action-with-annotation)
                                   {} {}) => {:hello "world", :mod :resp, :req {:mod :req}})
   (fact "Invoking the action ::action-without-annotation should ONLY intercept the request"
-        (conskit.protocols/invoke (get-action* @test-registry ::action-without-annotation)
+        (p/invoke (get-action* @test-registry ::action-without-annotation)
                                   {} {}) => {:hello "world", :req {:mod :req}})
   (fact "Invoking the action :not/normal-action should NOT intercept the request or response and should have result adding the 2 services"
-        (conskit.protocols/invoke (get-action* @test-registry :not/normal-action)
+        (p/invoke (get-action* @test-registry :not/normal-action)
                                   {} {}) => {:result 3})
   (fact "Invoking the action ::i-want-this-action should NOT intercept the request or response and should work as expected"
-        (conskit.protocols/invoke (get-action* @test-registry ::i-want-this-action)
+        (p/invoke (get-action* @test-registry ::i-want-this-action)
                                   {} {}) => {:hey :i_got_picked})
   (fact "Invoking the action ::i-really-want-this-action should NOT intercept the request or response and should work as expected"
-        (conskit.protocols/invoke (get-action* @test-registry ::i-really-want-this-action)
+        (p/invoke (get-action* @test-registry ::i-really-want-this-action)
                                   {} {}) => {:woo! :i_am_the_best})
   (fact "Metadata for all actions can be retrieved with select-meta-keys"
         (select-meta-keys* @test-registry [:id]) => [{:id :not/normal-action}
@@ -164,3 +168,42 @@
                                                      {:id ::i-really-want-this-action}])
   (fact "Metadata for a single action can be retrieved with select-meta-keys"
         (select-meta-keys* @test-registry ::action-with-annotation [::modify-response :modify-reponse]) => {::modify-response true}))
+
+(defservice
+  test-service
+  [[:ActionRegistry register-controllers! register-bindings! register-interceptors!]]
+  (init [this context]
+        (register-controllers! [normal-controller
+                                controller-with-annotation
+                                [controller-with-some-unwanted-actions
+                                 {:exclude [:i-dont-want-this-action]}]
+                                [controller-with-some-wanted-actions
+                                 {:include [:i-really-want-this-action]}]]
+                               [[modify-both {:except :dont-modify-me}]])
+        (register-bindings! test-bindings)
+        (register-interceptors! [modify-requests
+                                 modify-responses])
+        context))
+
+(with-app-with-cli-data
+  app
+  [registry test-service]
+  {:config "./dev-resources/test-config.conf"}
+  (let [reg (app/get-service app :ActionRegistry)]
+    (fact (p/invoke (p/get-action reg ::action-with-annotation)
+                    {} {}) => {:hello "world", :mod :resp, :req {:mod :req}})
+    (fact "Invoking the action ::action-with-annotation should intercept the request and response"
+          (p/invoke (p/get-action reg ::action-with-annotation)
+                    {} {}) => {:hello "world", :mod :resp, :req {:mod :req}})
+    (fact "Invoking the action ::action-without-annotation should ONLY intercept the request"
+          (p/invoke (p/get-action reg ::action-without-annotation)
+                    {} {}) => {:hello "world", :req {:mod :req}})
+    (fact "Invoking the action :not/normal-action should NOT intercept the request or response and should have result adding the 2 services"
+          (p/invoke (p/get-action reg :not/normal-action)
+                    {} {}) => {:result 3})
+    (fact "Invoking the action ::i-want-this-action should NOT intercept the request or response and should work as expected"
+          (p/invoke (p/get-action reg ::i-want-this-action)
+                    {} {}) => {:hey :i_got_picked})
+    (fact "Invoking the action ::i-really-want-this-action should NOT intercept the request or response and should work as expected"
+          (p/invoke (p/get-action reg ::i-really-want-this-action)
+                    {} {}) => {:woo! :i_am_the_best})))

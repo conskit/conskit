@@ -7,7 +7,7 @@
   [phase context & body]
   `(if (= (get ~context :phase) ~phase)
      (do ~@body)
-     (throw+ (Exception. "This can only be done during init phase"))))
+     (throw+ (Exception. (str "This can only be done during the " (name ~phase) " phase")))))
 
 
 (defmacro action [action-name args & body]
