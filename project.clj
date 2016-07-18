@@ -1,4 +1,4 @@
-(defproject conskit "0.1.0-SNAPSHOT"
+(defproject conskit "0.2.0-SNAPSHOT"
   :description "Toolkit for building applications"
   :url "https://github.com/conskit/conskit"
   :license {:name "Apache License, Version 2.0"
@@ -6,9 +6,9 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [slingshot "0.12.2"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [puppetlabs/trapperkeeper "1.3.0"]]
+                 [puppetlabs/trapperkeeper "1.4.1"]]
   :profiles {:dev {:source-paths ["dev"]
-                   :dependencies [[puppetlabs/trapperkeeper "1.3.0" :classifier "test"]
-                                  [puppetlabs/kitchensink "1.3.0" :classifier "test" :scope "test"]
+                   :dependencies [[puppetlabs/trapperkeeper "1.4.1" :classifier "test"]
+                                  [puppetlabs/kitchensink "1.3.1" :classifier "test" :scope "test"]
                                   [midje "1.8.3"]]
                    :plugins [[lein-midje "3.2"]]}})
