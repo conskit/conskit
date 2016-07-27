@@ -117,7 +117,10 @@
                :let [{:keys [metadata f]} v]]
            (do (check-for-ambiguous-alias! metadata alias all-aliases)
                (if-let [config (or (annot metadata) (alias metadata))]
-                 {k (assoc v :f (if has-req? (handler f config bindings) (handler f config)))}
+                 {k (assoc v :f (if has-req? (handler f config (if (:get-meta bindings)
+                                                                 bindings
+                                                                 (assoc bindings :get-meta (constantly metadata))))
+                                             (handler f config)))}
                  {k v})))))
 
 (defn- add-interceptors
@@ -132,12 +135,13 @@
             handler (annot handlers)
             {:keys [except config]} (annot settings)
             req (annot requirements)
-            has-req? (:requires req)]
-        (check-requirements-satisfied! req bindings "Interceptor")
+            has-req? (:requires req)
+            binds (merge {:get-meta nil} bindings)]
+        (check-requirements-satisfied! req binds "Interceptor")
         (recur (rest annots)
                (if all?
-                 (intercept-all acts except config handler has-req? bindings)
-                 (intercept-specific acts annot alias handler has-req? bindings aliases)))))))
+                 (intercept-all acts except config handler has-req? binds)
+                 (intercept-specific acts annot alias handler has-req? binds aliases)))))))
 
 (defn- inherit-annotations
   ""
