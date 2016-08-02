@@ -1,4 +1,4 @@
-(defproject conskit "0.2.0-SNAPSHOT"
+(defproject conskit "0.3.0-SNAPSHOT"
   :description "Toolkit for building applications"
   :url "https://github.com/conskit/conskit"
   :license {:name "Apache License, Version 2.0"

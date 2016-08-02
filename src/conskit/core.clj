@@ -97,7 +97,9 @@
                :let [{:keys [metadata f]} v]]
            (if (exception metadata)
              {k v}
-             {k (assoc v :f (if has-req? (handler f config bindings) (handler f config)))}))))
+             {k (assoc v :f (if has-req? (handler f config (if (not= :_ (:get-meta bindings))
+                                                             bindings
+                                                             (assoc bindings :get-meta (constantly metadata)))) (handler f config)))}))))
 
 (defn- check-for-ambiguous-alias!
   [metadata alias all-aliases]
@@ -117,7 +119,7 @@
                :let [{:keys [metadata f]} v]]
            (do (check-for-ambiguous-alias! metadata alias all-aliases)
                (if-let [config (or (annot metadata) (alias metadata))]
-                 {k (assoc v :f (if has-req? (handler f config (if (:get-meta bindings)
+                 {k (assoc v :f (if has-req? (handler f config (if (not= :_ (:get-meta bindings))
                                                                  bindings
                                                                  (assoc bindings :get-meta (constantly metadata))))
                                              (handler f config)))}
@@ -136,7 +138,7 @@
             {:keys [except config]} (annot settings)
             req (annot requirements)
             has-req? (:requires req)
-            binds (merge {:get-meta nil} bindings)]
+            binds (merge {:get-meta :_} bindings)]
         (check-requirements-satisfied! req binds "Interceptor")
         (recur (rest annots)
                (if all?

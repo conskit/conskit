@@ -32,7 +32,7 @@
   ^:foo/modify-request
    modify-requests
   "Intercepts requests and adds {:mod :req}"
-  [f config #{add} request]
+  [f config #{add get-meta} request]
   (if config
     (f (assoc request :mod :req))
     (f request)))
