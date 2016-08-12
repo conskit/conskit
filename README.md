@@ -60,7 +60,7 @@ Controllers are logical groupings of Actions. They're also responsible for provi
   test-action            ;; Action defined earlier
   (action                ;; Inline Action
     do-one-thing
-    [req data]
+    [data]
     "Goodbye Mars"))
 ```
 
