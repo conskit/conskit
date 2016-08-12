@@ -1,28 +1,28 @@
 
 # Conskit [![Build Status](https://travis-ci.org/conskit/conskit.svg)](https://travis-ci.org/conskit/conskit) [![Dependencies Status](https://jarkeeper.com/conskit/conskit/status.svg)](https://jarkeeper.com/conskit/conskit) [![Clojars Project](https://img.shields.io/clojars/v/conskit.svg)](https://clojars.org/conskit)
 
-Conskit (Construction Kit) is a toolkit that makes it easy to construct Clojure web applications in a very modular and consistent manner
+Conskit (Construction Kit) is a toolkit for building Clojure web applications in a very modular and consistent manner
 while still providing freedom and flexibility that has become commonplace in the Clojure community.
 
-## Getting Started
-- Quick Start - TBD
-- Lein Template - TBD
-- Building a SPA/MPA Hybrid application with Conskit, Http-kit, Nashorn, Sente and Reagent - TBD
+## Installation
+Add the dependency below to your `project.clj` file:
 
-### Installation
-TBD
+[![Clojars Project](http://clojars.org/conskit/latest-version.svg)](http://clojars.org/conskit)
 
-## Overview
-Conskit is built with [Trapperkeeper from puppetlabs](https://github.com/puppetlabs/trapperkeeper) as a base. In fact, at
+## Quick Links
+- [Lein Template](https://github.com/conskit/ck_app)
+- [Full Documentation](https://github.com/conskit/conskit/wiki)
+- [Book CRUD Tutorial](https://github.com/conskit/conskit/wiki/Let's-Build-a-Book-Database-(CRUD))
+
+## Conskit at a Glance
+Conskit was built using [Trapperkeeper from puppetlabs](https://github.com/puppetlabs/trapperkeeper), a microservices framework, as a base. In fact, at
 it's core Conskit is simply a single Trapperkeeper service that provides the following methods: `register-bindings!`,
 `register-controllers!` and `register-intercepters!`. Before diving any further into their purposes, I highly recommend
 taking a glance at Trapperkeeper's comprehensive [documentation](https://github.com/puppetlabs/trapperkeeper/wiki) and
 in particular, how to [define services](https://github.com/puppetlabs/trapperkeeper/wiki/Defining-Services).
 
 ### Actions
-The primary unit of work in Conskit is an `Action`. Actions are invokable objects that accept two parameters: a `request`
-that represents any additional/meta information about the invocation of the action and `data` which, as its name suggests,
-simply contains data passed to the invocation. Here is the simplest example of an `Action` defined using the `action` macro:
+The primary unit of work in Conskit is an `Action`. Actions are invokable objects that accepts a one parameter. Here is the simplest example of an `Action` defined using the `action` macro:
 
 ```clojure
 (ns com.foobar)
@@ -30,7 +30,7 @@ simply contains data passed to the invocation. Here is the simplest example of a
 (def test-action
   (action
     do-all-the-things
-    [request data]
+    [data]
     "Hello World"))
 ```
 
@@ -48,8 +48,6 @@ For example:
  :decryptor #(decr %)
  :send-to-s3! #(aws-put ...)}
 ```
-*Learn more about bindings [here]()!* - TDB
-
 
 [//]: # (What's the difference between this and `defn`?  `action` doesn't create a var and returns an map)
 ### Controllers
@@ -66,8 +64,6 @@ Controllers are logical groupings of Actions. They're also responsible for provi
     "Goodbye Mars"))
 ```
 
-*Learn more about controllers [here]()!* - TDB
-
 ### Interceptors
 You can think of interceptors as something analagous to [ring middleware](https://github.com/ring-clojure/ring/wiki/Concepts#middleware) (or [pedestal's interceptors](https://github.com/pedestal/pedestal/blob/master/guides/documentation/service-interceptors.md))
 except that it is setup to be more declarative. Similar to ring middleware they allow you to effectively wrap actions
@@ -78,9 +74,9 @@ to perform any additional functionality. Interceptors are defined using the macr
   ^:logger
   log-things
   "I log everything"              ;; optional docstring
-  [f config request data]
+  [f config request]
   (log/info "Entering action")
-  (let [result (f request data)]
+  (let [result (f request)]
     (log/info "Leaving action")
     result))
 ```
@@ -92,20 +88,17 @@ This interceptor could then be declared on an action like this:
   (action
     ^{:logger {:level :info}}
     do-foo-things
-    [request data]
+    [request]
     "Hello World"))
 ```
 
-Here `f` is the function of the action being wrapped, `config` is the information provided when the interceptor was
-declared (in this case it would be `{:level :info}`) while `request` and `data` still hold their previous meanings.
-
-*Learn more about interceptors [here]()!* - TDB
+In our `log-things` interceptor, `f` is the function for the action being wrapped, `config` is the information provided when the interceptor was declared (in this case it would be `{:level :info}`) while `request` is simply the single argument to the action.
 
 ### Registration
 
 After all your actions, bindings, controllers and interceptors have been defined, how do they all tie together?
 This is where our Trapperkeeper service comes into play. You would effectively create your own Trapperkeeper servive that
-depends on the service provided by Conskit and then, using the methods provided by the service, you would register
+depends on the service provided by Conskit (:ActionRegistry) and then, using the methods provided by the service, you would register
 your controllers, bindings and interceptors:
 
 ```clojure
@@ -134,7 +127,6 @@ com.foobar/my-service
 
 Then once Trapperkeeper boots up then Conskit will take care of the rest.
 
-*Learn more about Registration, Conskit and Trapperkeeper [here]()!* - TDB
 
 ### I thought you said Web applications...
 
@@ -144,7 +136,7 @@ table are also going to be Trapperkeeper services. For example, lets say we want
 as our web server:
 
 ```clojure
-;; Probably wont really work
+;; Wont really work
 (defservice
   web-server-service WebServer
   [[:ConfigService get-in-config]]
@@ -194,18 +186,18 @@ com.foobar/web-server-service
 
 But! Of course it would be nice to have some reasonable defaults for these and other kinds of services:
 
-- ck.routing (TBD)
-- ck.http-kit (TBD)
-- ck.flywaydb.migrations (TBD)
-- ck.mailer (TBD)
-- Plus more
+- [ck.routing](https://github.com/conskit/ck.routing)
+- [ck.server](https://github.com/conskit/ck.server)
+- [ck.migrations](https://github.com/conskit/ck.migrations)
+- [ck.mailer](https://github.com/conskit/ck.mailer)
+- [*Plus more...*](https://github.com/conskit)
 
 
 ### What about the actions?
 
 The Conskit registry service actually provides an additional method method called `get-action` that could be used to
 retrieve any action that was registered in a controller. `get-action` expects to be provided with a keyword with the
-action ID and it will return an `ActionInstance` on which `conskit.core/invoke` can be called.
+action ID and it will return an `ActionInstance` on which `conskit.protocols/invoke` can be called.
 
 The action IDs are created by concatenating the name provided with the namespace it was declared/defined in. So in our
 very first example of a simple action. Its ID would actually be `:com.foobar/do-all-the-things`:
@@ -220,32 +212,16 @@ provided
 ## What makes conskit different?
 
 The main selling point of this toolkit is that everything is replaceable including the core service provided. You have
-the option to used third-party services which may register their own actions, controllers, bindings and interceptors, you can
+the option to use third-party services which may register their own actions, controllers, bindings and interceptors, you can
 be selective and use only a subset of the functionality offered by the third party or you can choose to roll your own.
 Conskit does not attempt to provide you with a "framework" but to provide you with the facility to construct your own
 "framework" (or application) from several reusable and replaceable parts.
 
-### Is this for me?
-Perhaps... Are you interested in:
+### Why you might decide against Conskit?
 
-- Total decoupling of every part of your application
-- The ideas expressed in the Overview
-
-If yes, then Conskit could for for you.
-
-### Philosophies
-
-- TBD
-
-## Usage
-TBD
-
-## Testing Actions
-TBD
-
-
-## TODO
-- Documentation/README flow needs to be more coherent
+-  Perhaps you're not a fan of all the macros or Trapperkeeper
+-  The declarative setup for interceptors makes the true nature of actions less obvious/implicit
+-  more...?
 
 ## Contributors
 Conskit was created by [Jason Murphy](https://github.com/jsonmurphy)
