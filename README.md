@@ -223,6 +223,13 @@ Conskit does not attempt to provide you with a "framework" but to provide you wi
 -  The declarative setup for interceptors makes the true nature of actions less obvious/implicit
 -  more...?
 
+## Credits
+Conskit and its various modules would not exist without the foundation provided by the following libraries and supporting articles.
+- [trapperkeeper](https://github.com/puppetlabs/trapperkeeper)
+- [omelette](https://github.com/DomKM/omelette)
+- [ServerSide Rendering of Reagent Components](http://blog.gonzih.me/blog/2015/02/16/serverside-rendering-of-reagent-components/)
+
+
 ## Contributors
 Conskit was created by [Jason Murphy](https://github.com/jsonmurphy)
 
