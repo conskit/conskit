@@ -10,7 +10,15 @@
      (throw+ (Exception. (str "This can only be done during the " (name ~phase) " phase")))))
 
 
-(defmacro action [action-name args & body]
+(defmacro action
+  "A macro that produces a map containing a single entry that has metadata and a function.
+
+  Actions are created with an id which is a namespaced keyword combination of the namespace
+  it was defined in and the action name. it is added as a part of the metadata.
+
+  Additional meta data can be added by annotation the action using clojure's meta facilities
+  (i.e) `^{:hello :world}`"
+  [action-name args & body]
   (let [defined-ns (str *ns*)
         action-ns (or (namespace action-name) defined-ns)
         temp-name (symbol (name action-name))
@@ -27,11 +35,14 @@
                             (assoc :ns ~defined-ns))
               :f      (fn ~args ~@body)}})))
 
-(defmacro defcontroller [cname args & actions]
+(defmacro defcontroller
+  "A macro that creates a var containing a map with data pertaining to a controller as well
+  as a function that expects to be provided with a map of bindings to produce a map of actions"
+  [cname args & actions]
   (let [destructured (destructure [{:keys args}])
         metadata (meta cname)
         defined-in-ns (str *ns*)]
-    `(def ~cname "kdjfkjlad"
+    `(def ~cname
        {:name     (name '~cname)
         :requires (map keyword '~args)
         :metadata ~metadata
@@ -40,7 +51,10 @@
                     ~destructured
                     (merge ~@actions))})))
 
-(defmacro definterceptor [iname & forms]
+(defmacro definterceptor
+  "A macro that create a var containing a map with data pertaining to an interceptor including
+  the function to be used to wrap actions"
+  [iname & forms]
   (let [meta (meta iname)
         _ (assert meta (str "Missing annotation for interceptor: " iname))
         annot (first (first meta))
@@ -54,9 +68,9 @@
         result {:alias annot-alias :annotation qualified-annot :name (name iname)}]
     (assert (= (count meta) 1) "Only one annotation allowed per interceptor")
     (condp = num-args
-      2 `(def ~iname ~doc-string
-           (assoc ~result
-             :fn (fn [~@args] ~@body)))
+      ;2 `(def ~iname ~doc-string
+      ;     (assoc ~result
+      ;       :fn (fn [~@args] ~@body)))
       3 (let [arg (get args 2)
               isBinding? (and (set? arg)
                              (not-empty arg))

@@ -13,17 +13,19 @@
   (invoke [_ request]
     (f request)))
 
-(def empty-container {:controllers []
-                      :bindings {}
-                      :interceptors {:annotations #{}
-                                     :aliases      {}
-                                     :requirements {}
-                                     :handlers    {}
-                                     :settings    {}}})
+(def empty-container
+  "Default Container"
+  {:controllers []
+   :bindings {}
+   :interceptors {:annotations #{}
+                  :aliases      {}
+                  :requirements {}
+                  :handlers    {}
+                  :settings    {}}})
 
 ;; Action Registry Service
 (def ^:private registry-container
-  "Temporary container"
+  "Temporary container for the Registry"
   (atom empty-container))
 
 (defn- compare-priority
@@ -35,7 +37,7 @@
       (>= (or (k1 config) 0) (or (k2 config) 0)))))
 
 (defn register-interceptors!*
-  "Registers a list of controllers"
+  "Registers a list of interceptors into the container"
   ([interceptors config container-atom] (register-interceptors!* interceptors config container-atom false))
   ([interceptors config container-atom all?]
     (doseq [inter interceptors]
@@ -50,7 +52,7 @@
                     (assoc-in [:handlers qannot] interceptor)))))))
 
 (defn register-controllers!*
-  "Registers a list of controllers"
+  "Registers a list of controllers into the container"
   ([controllers container-atom] (register-controllers!* controllers container-atom nil nil))
   ([controllers container-atom interceptors config]
    (when interceptors
@@ -63,7 +65,7 @@
        (swap! container-atom update :controllers #(conj % controller))))))
 
 (defn register-bindings!*
-  "Registers Bindings"
+  "Registers Bindings into the container"
   [bindings container-atom]
   (doseq [[id value] bindings]
     (when (get-in @container-atom [:bindings id])
@@ -85,12 +87,13 @@
     (select-keys (:metadata (get-action* container id)) key-seq)))
 
 (defn- check-requirements-satisfied!
-  "Verifies that bindings exist for all the controller parameters"
+  "Verifies that bindings exist for all the controller or interceptor parameters"
   [{:keys [name requires]} bindings type]
   (doseq [req requires]
     (assert (bindings req) (str type " \"" name "\" requirement \"" req "\" is not satisfiable: Did you register a binding for it?"))))
 
 (defn- intercept-all
+  "Intercepts all actions except those with particular annotations"
   [actions exception config handler has-req? bindings]
   (apply merge
          (for [[k v] actions
@@ -102,6 +105,7 @@
                                                              (assoc bindings :get-meta (constantly metadata)))) (handler f config)))}))))
 
 (defn- check-for-ambiguous-alias!
+  "Checks if a specified annotation alias clashes with any other alias"
   [metadata alias all-aliases]
   (let [interceptors (keys (filter (fn [[_ v]] (= alias v)) all-aliases))
         multiple? (> (count interceptors) 1)
@@ -113,20 +117,28 @@
                                        (apply str (map #(str "\n> " % ) interceptors)) "\n\n"))))
 
 (defn- intercept-specific
-  [actions annot alias handler has-req? bindings all-aliases]
+  "Intercepts particular actions that have relevant annotations"
+  [actions annot alias default-config handler has-req? bindings all-aliases]
   (apply merge
          (for [[k v] actions
                :let [{:keys [metadata f]} v]]
            (do (check-for-ambiguous-alias! metadata alias all-aliases)
-               (if-let [config (or (annot metadata) (alias metadata))]
-                 {k (assoc v :f (if has-req? (handler f config (if (not= :_ (:get-meta bindings))
-                                                                 bindings
-                                                                 (assoc bindings :get-meta (constantly metadata))))
-                                             (handler f config)))}
+               (if-let [annot-config (or (annot metadata) (alias metadata))]
+                 (let [config (cond
+                                (= annot-config default-config) default-config
+                                (true? annot-config) (or default-config true)
+                                (and (map? annot-config)
+                                     (map? default-config)) (merge default-config annot-config)
+                                :else annot-config)]
+                   {k (assoc v :f (if has-req? (handler f config
+                                                        (if (not= :_ (:get-meta bindings))
+                                                          bindings
+                                                          (assoc bindings :get-meta (constantly metadata))))
+                                               (handler f config)))})
                  {k v})))))
 
 (defn- add-interceptors
-  ""
+  "Adds interceptors to all the actions"
   [actions {:keys [annotations aliases handlers settings requirements]} bindings]
   (loop [annots annotations
          acts actions]
@@ -135,7 +147,7 @@
       (let [[annot all?] (ffirst annots)
             alias (annot aliases)
             handler (annot handlers)
-            {:keys [except config]} (annot settings)
+            {:keys [except config] :as default-config} (annot settings)
             req (annot requirements)
             has-req? (:requires req)
             binds (merge {:get-meta :_} bindings)]
@@ -143,15 +155,15 @@
         (recur (rest annots)
                (if all?
                  (intercept-all acts except config handler has-req? binds)
-                 (intercept-specific acts annot alias handler has-req? binds aliases)))))))
+                 (intercept-specific acts annot alias default-config handler has-req? binds aliases)))))))
 
 (defn- inherit-annotations
-  ""
+  "Merges the annotations of the controller with the each action's annotations"
   [actions meta]
   (apply merge (map (fn [[k v]] {k (update v :metadata #(merge meta %))}) actions)))
 
 (defn build-registry
-  "Builds the state for the registry"
+  "Builds the state for the registry (i.e map of actions)"
   [{:keys [controllers bindings interceptors]} exclusions overrides-allowed?]
   (let [actions (atom {})
 

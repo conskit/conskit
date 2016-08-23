@@ -28,10 +28,11 @@
     "Registers a list of interceptors that will be used to wrap actions depending the presence of a particular
      annotation. the list is in the form:
 
-     {:annotation-key interceptor-fn} or {:annotation-key [priority interceptor-fn]}
+     [in1 in2] or [[in1 config][in2 config]]
 
-     where the interceptor-fn is a function that accepts both the function and metadata of an action and
-     returns a new function that accepts a request, data and metadata")
+     where config is the default configuration provided if the annotation is just specified as true. if the config
+     on provided by the annotation and the config here are maps then this config will be merged with the annotation'ss
+     otherwise for any other type it will be replaced by the annotation value")
   (get-action [this id]
     "Retrieve an action from the registry")
   (select-meta-keys [this key-seq] [this id key-seq]
