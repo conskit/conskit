@@ -4,10 +4,6 @@
 Conskit (Construction Kit) is a toolkit for building Clojure web applications in a very modular and consistent manner
 while still providing freedom and flexibility that has become commonplace in the Clojure community.
 
-## Installation
-Add the dependency below to your `project.clj` file:
-
-[![Clojars Project](http://clojars.org/conskit/latest-version.svg)](http://clojars.org/conskit)
 
 ## Quick Links
 - [Lein Template](https://github.com/conskit/ck_app)
