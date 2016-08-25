@@ -205,6 +205,8 @@ very first example of a simple action. Its ID would actually be `:com.foobar/do-
 So essentially your routing service could leverage `get-action` and dispatch actions based on the ID
 provided
 
+Learn more about the Core Concepts [here](https://github.com/conskit/conskit/wiki/Core-Concepts).
+
 ## What makes conskit different?
 
 The main selling point of this toolkit is that everything is replaceable including the core service provided. You have
